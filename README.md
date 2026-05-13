@@ -2,9 +2,9 @@
 
 Webスクレイピングでイベントスケジュールを取得するプロジェクト
 
----
 
-## 📌 Overview
+
+## 📌 概要
 
 このプロジェクトは、複数のサイトからイベントスケジュールを取得し、構造化データとして扱うためのスクリプトです。
 
@@ -13,84 +13,70 @@ Webスクレイピングでイベントスケジュールを取得するプロ�
 - https://not-equal-me.jp/schedule/
 - https://nearly-equal-joy.jp/schedule/
 
----
 
-## 🚀 Features
+
+## 🚀 機能
 
 - スケジュール情報の自動取得
-- グループ別にデータ整理
 - 月ごとのデータ取得対応
-- Googleカレンダーに取得した情報から予定を作成
+- グループ別にデータ整理
+- 取得データからGoogleカレンダー予定作成
 - 型チェック対応（mypy）
 - コード整形（ruff）
 
----
 
-## 🛠️ Tech Stack
+
+## 🛠️ 使用技術
 
 - Python 3.13
 - uv（パッケージ管理）
 - requests
 - BeautifulSoup4
+- types-requests
 - mypy
 - ruff
+- pre-commit
 
----
 
-## 📦 Setup
 
-### 1. プロジェクト作成
-
-```bash
-uv init
-uv python install 3.13
-```
-
-### 2. Pythonインストール
+## 📦 セットアップ
 
 ```bash
-uv python install 3.13
+git clone <repository-url>
+cd <project-name>
+
+uv sync
 ```
 
-### 3. 仮想環境作成
 
-```bash
-uv venv --python 3.13
-```
 
-### 4. 依存関係インストール
-
-```bash
-uv add requests beautifulsoup4
-uv add --dev mypy ruff
-```
-
-## ▶️ Usage
+## ▶️ 使用方法
 
 ```bash
 uv run python main.py
 ```
-または
-```bash
-python main.py
-```
-(venv有効化時)
 
-## 🧪 Lint & Type Check
+
+
+## 🧪 Lint & 型チェック
+
 ```bash
 uv run ruff check .
 uv run mypy .
 ```
 
-## 📁 Project Structure
-```bash
+
+
+## 📁 ディレクトリ構成
+
+```
 .
 ├── .github/
 │   ├── workflows/
 │   │   ├── branch_restrictions.yaml
 │   │   └── ci.yaml
 │   └── pull_request_template.md
-├── calender/
+├── calendar/
 │   └── add_schedules.py
 ├── scraper/
 │   └── get_schedules.py
@@ -99,21 +85,23 @@ uv run mypy .
 ├── .python-version
 ├── main.py
 ├── pyproject.toml
-├── README.md
-└── uv.lock
+├── uv.lock
+└── README.md
 ```
 
-## 📌 Notes
+
+
+## 📌 備考
+
 - スクレイピング対象サイトの仕様変更に注意
 - 過度なアクセスは避ける（負荷対策）
 - HTML構造依存のため壊れやすい
 
-## 🧑‍💻 Author
-- [tsuruoka-shun](https://github.com/tsuruoka-shun)
 
-## ⚠️ Git Rules
 
-### Branch
+## ⚠️ Gitルール
+
+### ブランチ命名規則
 
 - feature/*
 - fix/*
@@ -122,11 +110,17 @@ uv run mypy .
 - hotfix/*
 - docs/*
 
-### Commit Message
+### コミットメッセージ規則
 
 - feature: 新機能追加
 - fix: 不具合修正
-- chore: その他の微調整・環境設定
+- chore: 環境・設定・軽微な変更
 - refactor: リファクタリング
-- hotfix: 緊急修正（本番環境）
-- docs: ドキュメント修正
+- hotfix: 緊急修正
+- docs: ドキュメント変更
+
+
+
+## 🧑‍💻 作成者
+
+- [tsuruoka-shun](https://github.com/tsuruoka-shun) (GitHub)
