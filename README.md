@@ -21,21 +21,24 @@ Webスクレイピングでイベントスケジュールを取得するプロ�
 - 月ごとのデータ取得対応
 - グループ別にデータ整理
 - 取得データからGoogleカレンダー予定作成
-- 型チェック対応（mypy）
-- コード整形（ruff）
 
 
 
 ## 🛠️ 使用技術
 
 - Python 3.13
-- uv（パッケージ管理）
+- uv
+- beautifulsoup4
+- google-api-python-client
+- google-auth
+- python-dotenv
 - requests
-- BeautifulSoup4
-- types-requests
+- tzdata
+- isort
 - mypy
-- ruff
 - pre-commit
+- ruff
+- types-requests
 
 
 
@@ -76,10 +79,16 @@ uv run mypy .
 │   │   ├── branch_restrictions.yaml
 │   │   └── ci.yaml
 │   └── pull_request_template.md
-├── calendar/
+├── schedule_calendar/
+│   ├── __init__.py
 │   └── add_schedules.py
 ├── scraper/
+│   ├── __init__.py
 │   └── get_schedules.py
+├── typings/
+│   └── googleapiclient/
+│       ├── __init__.pyi
+│       └── discovery.pyi
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── .python-version
