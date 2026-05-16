@@ -36,6 +36,8 @@ CALENDAR_ID = {
 def add_schedules(schedules: dict[str, list[dict[str, str]]]) -> None:
     for group_name, group_schedules in schedules.items():
         logger.info("Processing group: %s", group_name)
+        added_count = 0
+        duplicate_count = 0
 
         events = (
             service.events()
@@ -59,7 +61,7 @@ def add_schedules(schedules: dict[str, list[dict[str, str]]]) -> None:
 
         for schedule in group_schedules:
             if schedule["link"] in existing_links:
-                logger.info("Skipping duplicate event: %s", schedule["title"])
+                duplicate_count += 1
                 continue
             next_day = datetime.strptime(
                 schedule["date"], "%Y-%m-%d"
@@ -77,7 +79,17 @@ def add_schedules(schedules: dict[str, list[dict[str, str]]]) -> None:
                 service.events().insert(
                     calendarId=CALENDAR_ID[group_name], body=event
                 ).execute()
-                logger.info("Added event: %s (%s)", schedule["title"], schedule["date"])
+                added_count += 1
             except Exception as e:
                 logger.error("Failed to add event '%s': %s", schedule["title"], e)
+        logger.info(
+            "Skipped %d duplicate events (group: %s)",
+            duplicate_count,
+            group_name,
+        )
+        logger.info(
+            "Added %d new events (group: %s)\n",
+            added_count,
+            group_name,
+        )
     return None

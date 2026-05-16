@@ -32,12 +32,12 @@ def get_schedules() -> dict[str, list[dict[str, str]]]:
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
         except requests.RequestException:
-            logger.exception("%s: request 失敗", group_name)
+            logger.exception("%s: Failed request", group_name)
             continue
 
         cells = soup.select(".calendarBody .cell")
         if not cells:
-            logger.warning("%s: cell 取得失敗", group_name)
+            logger.warning("%s: Failed to get cell", group_name)
             continue
 
         for cell in cells:
@@ -50,7 +50,7 @@ def get_schedules() -> dict[str, list[dict[str, str]]]:
             for item in cell.select("div[class^=live]"):
                 title_tag = item.select_one(".tit")
                 if not title_tag:
-                    logger.warning("%s: title 取得失敗", group_name)
+                    logger.warning("%s: Failed to get title", group_name)
                     continue
 
                 link_tag = item.select_one("a")
@@ -68,4 +68,7 @@ def get_schedules() -> dict[str, list[dict[str, str]]]:
                         "link": f"{url}{href}",
                     }
                 )
+        logger.info(
+            "Scraped %d events (group: %s)", len(schedules[group_name]), group_name
+        )
     return schedules
