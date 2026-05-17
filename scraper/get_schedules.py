@@ -37,8 +37,7 @@ def get_schedules() -> dict[str, list[dict[str, str]]]:
 
         cells = soup.select(".calendarBody .cell")
         if not cells:
-            logger.warning("%s: Failed to get cell", group_name)
-            continue
+            raise RuntimeError(f"Failed to get cells (group: {group_name})")
 
         for cell in cells:
             date_tag = cell.select_one(".date")
@@ -50,7 +49,7 @@ def get_schedules() -> dict[str, list[dict[str, str]]]:
             for item in cell.select("div[class^=live]"):
                 title_tag = item.select_one(".tit")
                 if not title_tag:
-                    logger.warning("%s: Failed to get title", group_name)
+                    logger.warning("Failed to get title (group: %s)", group_name)
                     continue
 
                 link_tag = item.select_one("a")
