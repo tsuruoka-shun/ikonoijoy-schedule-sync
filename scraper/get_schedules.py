@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import requests
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 JST = ZoneInfo("Asia/Tokyo")
 today = datetime.now(JST).date()
 year = today.year
-month = f"{today.month:02}"
+month = today.month
 
 urls = {
     "equal_love": "https://equal-love.jp",
@@ -29,7 +29,7 @@ def get_schedules() -> dict[str, list[dict[str, str]]]:
     for group_name, url in urls.items():
         try:
             response = requests.get(
-                f"{url}/schedule/calender/{year}/{month}", timeout=10
+                f"{url}/schedule/calender/{year}/{month:02}", timeout=10
             )
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
@@ -46,7 +46,10 @@ def get_schedules() -> dict[str, list[dict[str, str]]]:
             if not date_tag or not date_tag.text.strip():
                 continue
 
-            date = date_tag.text.strip()
+            date_text = date_tag.text.strip()
+            acquisition_date = date(year, month, int(date_text))
+            if today - timedelta(days=7) > acquisition_date:
+                continue
 
             for div_tag in cell.select("div[class^=live]"):
                 title_tag = div_tag.select_one(".tit")
@@ -64,7 +67,7 @@ def get_schedules() -> dict[str, list[dict[str, str]]]:
 
                 schedules[group_name].append(
                     {
-                        "date": f"{year}-{month}-{int(date):02}",
+                        "date": acquisition_date.strftime("%Y-%m-%d"),
                         "title": title_tag.text.strip(),
                         "link": f"{url}{href}",
                     }
