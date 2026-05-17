@@ -1,12 +1,14 @@
 import logging
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
 
-jst = timezone(timedelta(hours=9), "JST")
-today = datetime.now(jst).date()
+JST = ZoneInfo("Asia/Tokyo")
+today = datetime.now(JST).date()
 year = today.year
 month = f"{today.month:02}"
 
