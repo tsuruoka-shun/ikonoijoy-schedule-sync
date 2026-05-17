@@ -10,7 +10,11 @@ logger = logging.getLogger(__name__)
 def main():
     logger.info("Scraping start")
 
-    schedules = get_schedules()
+    try:
+        schedules = get_schedules()
+    except Exception:
+        logger.exception("Scraping failed, skipping sync")
+        return
 
     logger.info("Scraping done\n")
 
