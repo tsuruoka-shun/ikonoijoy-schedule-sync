@@ -6,9 +6,9 @@ from datetime import datetime, timezone, timedelta
 logger = logging.getLogger(__name__)
 
 jst = timezone(timedelta(hours=9), "JST")
-now = datetime.now(jst)
-year = now.year
-month = f"{now.month:02}"
+today = datetime.now(jst).date()
+year = today.year
+month = f"{today.month:02}"
 
 urls = {
     "equal_love": "https://equal-love.jp",
@@ -46,13 +46,13 @@ def get_schedules() -> dict[str, list[dict[str, str]]]:
 
             date = date_tag.text.strip()
 
-            for item in cell.select("div[class^=live]"):
-                title_tag = item.select_one(".tit")
+            for div_tag in cell.select("div[class^=live]"):
+                title_tag = div_tag.select_one(".tit")
                 if not title_tag:
                     logger.warning("Failed to get title (group: %s)", group_name)
                     continue
 
-                link_tag = item.select_one("a")
+                link_tag = div_tag.select_one("a")
                 if not link_tag:
                     continue
 
