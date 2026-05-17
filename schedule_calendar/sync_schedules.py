@@ -12,6 +12,9 @@ from googleapiclient.discovery import build
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
+logging.getLogger("googleapiclient.discovery").setLevel(logging.INFO)
+logging.getLogger("google_auth_httplib2").setLevel(logging.INFO)
 
 JST = ZoneInfo("Asia/Tokyo")
 today = datetime.now(JST)
@@ -79,6 +82,7 @@ def sync_schedules(schedules: dict[str, list[dict[str, str]]]) -> None:
                 service.events().insert(
                     calendarId=CALENDAR_ID[group_name], body=event
                 ).execute()
+                logger.debug("Added event '%s'", schedule["title"])
                 added_count += 1
             except Exception as e:
                 logger.error("Failed to add event '%s': %s", schedule["title"], e)
