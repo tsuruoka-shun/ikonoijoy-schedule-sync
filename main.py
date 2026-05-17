@@ -1,6 +1,6 @@
 import logging
 
-from schedule_calendar.add_schedules import add_schedules
+from schedule_calendar.sync_schedules import sync_schedules
 from scraper.get_schedules import get_schedules
 
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +20,7 @@ def main():
 
     logger.info("Add to schedules start\n")
 
-    add_schedules(schedules)
+    sync_schedules(schedules)
 
     logger.info("Add to schedules done")
 
