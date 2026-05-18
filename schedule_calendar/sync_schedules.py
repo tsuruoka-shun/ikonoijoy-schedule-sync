@@ -19,7 +19,8 @@ logging.getLogger("google_auth_httplib2").setLevel(logging.INFO)
 JST = ZoneInfo("Asia/Tokyo")
 today = datetime.now(JST)
 _, last_day = calendar.monthrange(today.year, today.month)
-month_start = datetime(today.year, today.month, 1, 0, 0, 0, tzinfo=JST)
+one_week_ago = today - timedelta(days=7)
+one_week_ago_midnight = one_week_ago.replace(hour=0, minute=0, second=0, tzinfo=JST)
 month_last = datetime(today.year, today.month, last_day, 23, 59, 59, tzinfo=JST)
 
 
@@ -42,20 +43,36 @@ def sync_schedules(schedules: dict[str, list[dict[str, str]]]) -> None:
         added_count = 0
         duplicate_count = 0
 
-        events = (
-            service.events()
-            .list(
-                calendarId=CALENDAR_ID[group_name],
-                timeMin=month_start.isoformat(),
-                timeMax=month_last.isoformat(),
-            )
-            .execute()
-        )
         existing_links = set()
-        for e in events.get("items", []):
-            link = e.get("extendedProperties", {}).get("private", {}).get("source_link")
-            if link:
-                existing_links.add(link)
+        page_token = None
+        while True:
+            events = (
+                service.events()
+                .list(
+                    calendarId=CALENDAR_ID[group_name],
+                    timeMin=one_week_ago_midnight.isoformat(),
+                    timeMax=month_last.isoformat(),
+                    timeZone="Asia/Tokyo",
+                    singleEvents=True,
+                    maxResults=100,
+                    fields="items(summary,start,end,extendedProperties(private/source_link)),nextPageToken",
+                    pageToken=page_token,
+                )
+                .execute()
+            )
+            for e in events.get("items", []):
+                link = (
+                    e.get("extendedProperties", {})
+                    .get("private", {})
+                    .get("source_link")
+                )
+                if link:
+                    existing_links.add(link)
+
+            page_token = events.get("nextPageToken")
+            if not page_token:
+                break
+
         logger.info(
             "Fetched %d existing events from Google Calendar (group: %s)",
             len(existing_links),
@@ -82,7 +99,9 @@ def sync_schedules(schedules: dict[str, list[dict[str, str]]]) -> None:
                 service.events().insert(
                     calendarId=CALENDAR_ID[group_name], body=event
                 ).execute()
-                logger.debug("Added event '%s'", schedule["title"])
+                logger.debug(
+                    "Added event to %s '%s'", schedule["date"], schedule["title"]
+                )
                 added_count += 1
             except Exception as e:
                 logger.error("Failed to add event '%s': %s", schedule["title"], e)
