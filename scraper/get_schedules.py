@@ -72,7 +72,5 @@ def get_schedules() -> dict[str, list[dict[str, str]]]:
                         "link": f"{url}{href}",
                     }
                 )
-        logger.info(
-            "Scraped %d events (group: %s)", len(schedules[group_name]), group_name
-        )
+        logger.debug("Scraped %d events", len(schedules[group_name]))
     return schedules
