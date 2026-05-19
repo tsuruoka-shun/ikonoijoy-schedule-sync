@@ -18,7 +18,7 @@ def main():
 
     logger.info("Scraping done\n")
 
-    logger.info("Add to schedules start\n")
+    logger.info("Add to schedules start")
 
     sync_schedules(schedules)
 
