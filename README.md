@@ -81,7 +81,7 @@ uv run mypy .
 │   └── pull_request_template.md
 ├── schedule_calendar/
 │   ├── __init__.py
-│   └── add_schedules.py
+│   └── sync_schedules.py
 ├── scraper/
 │   ├── __init__.py
 │   └── get_schedules.py
