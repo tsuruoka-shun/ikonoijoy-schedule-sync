@@ -1,7 +1,7 @@
 import logging
 
-from schedule_calendar.sync_schedules import sync_schedules
-from scraper.get_schedules import get_schedules
+from sync.google_calendar import sync_schedules
+from scraper.schedule import get_schedules
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
