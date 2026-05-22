@@ -41,7 +41,7 @@ CALENDAR_ID = {
 }
 
 
-def sync_schedules(schedules: dict[str, list[dict[str, str]]]) -> None:
+def sync_events(schedules: dict[str, list[dict[str, str]]]) -> None:
     for group_name, group_schedules in schedules.items():
         logger.info("Processing group: %s", group_name)
         added_count = 0

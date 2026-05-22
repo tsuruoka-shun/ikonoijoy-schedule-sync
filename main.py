@@ -1,7 +1,7 @@
 import logging
 
-from sync.google_calendar import sync_schedules
-from scraper.schedule import get_schedules
+from sync.google_calendar import sync_events
+from scraper.schedule import get_schedule
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ def main():
     logger.info("Scraping start")
 
     try:
-        schedules = get_schedules()
+        schedules = get_schedule()
     except Exception:
         logger.exception("Scraping failed, skipping sync")
         return
@@ -20,7 +20,7 @@ def main():
 
     logger.info("Add to schedules start")
 
-    sync_schedules(schedules)
+    sync_events(schedules)
 
     logger.info("Add to schedules done")
 

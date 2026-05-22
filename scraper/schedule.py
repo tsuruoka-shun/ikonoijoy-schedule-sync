@@ -25,7 +25,7 @@ schedules: dict[str, list[dict[str, str]]] = {
 }
 
 
-def get_schedules() -> dict[str, list[dict[str, str]]]:
+def get_schedule() -> dict[str, list[dict[str, str]]]:
     for group_name, url in urls.items():
         try:
             response = requests.get(
