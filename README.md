@@ -9,9 +9,9 @@ Webスクレイピングでイベントスケジュールを取得するプロ�
 このプロジェクトは、複数のサイトからイベントスケジュールを取得し、構造化データとして扱うためのスクリプトです。
 
 対象サイト：
-- https://equal-love.jp/schedule/
-- https://not-equal-me.jp/schedule/
-- https://nearly-equal-joy.jp/schedule/
+- https://equal-love.jp/schedule
+- https://not-equal-me.jp/schedule
+- https://nearly-equal-joy.jp/schedule
 
 
 
@@ -79,12 +79,12 @@ uv run mypy .
 │   │   ├── branch_restrictions.yaml
 │   │   └── ci.yaml
 │   └── pull_request_template.md
-├── schedule_calendar/
+├── sync/
 │   ├── __init__.py
-│   └── sync_schedules.py
+│   └── google_calendar.py
 ├── scraper/
 │   ├── __init__.py
-│   └── get_schedules.py
+│   └── schedule.py
 ├── typings/
 │   └── googleapiclient/
 │       ├── __init__.pyi
