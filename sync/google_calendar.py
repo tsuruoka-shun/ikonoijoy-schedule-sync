@@ -3,7 +3,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
@@ -13,154 +13,174 @@ from googleapiclient.discovery import build
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-for lib in [
-    "urllib3.connectionpool",
-    "googleapiclient.discovery",
-    "google_auth_httplib2",
-]:
-    logging.getLogger(lib).setLevel(logging.INFO)
 
-JST = ZoneInfo("Asia/Tokyo")
-today = datetime.now(JST)
-_, last_day = calendar.monthrange(today.year, today.month)
-one_week_ago = today - timedelta(days=7)
-one_week_ago_midnight = one_week_ago.replace(hour=0, minute=0, second=0, tzinfo=JST)
-month_last = datetime(today.year, today.month, last_day, 23, 59, 59, tzinfo=JST)
-
-
-credentials = service_account.Credentials.from_service_account_file(
+cred = service_account.Credentials.from_service_account_file(
     Path(__file__).resolve().parent.parent / "credentials/service_account.json",
     scopes=["https://www.googleapis.com/auth/calendar"],
 )
-service = build("calendar", "v3", credentials=credentials)
+service = build("calendar", "v3", credentials=cred)
 
-CALENDAR_ID = {
-    "equal_love": os.getenv("EQUAL_LOVE_CALENDAR_ID"),
-    "not_equal_me": os.getenv("NOT_EQUAL_ME_CALENDAR_ID"),
-    "nearly_equal_joy": os.getenv("NEARLY_EQUAL_JOY_CALENDAR_ID"),
+CALENDAR_IDS = {
+    "equal_love": os.environ["EQUAL_LOVE_CALENDAR_ID"],
+    "not_equal_me": os.environ["NOT_EQUAL_ME_CALENDAR_ID"],
+    "nearly_equal_joy": os.environ["NEARLY_EQUAL_JOY_CALENDAR_ID"],
 }
 
 
-def sync_events(schedules: dict[str, list[dict[str, str]]]) -> None:
-    for group_name, group_schedules in schedules.items():
-        logger.info("Processing group: %s", group_name)
-        added_count = 0
-        duplicate_count = 0
-        update_count = 0
+def get_time_bounds(time_zone: str = "Asia/Tokyo") -> tuple[datetime, datetime]:
+    tz = ZoneInfo(time_zone)
+    today = datetime.now(tz)
+    _, last_day = calendar.monthrange(today.year, today.month)
+    fetch_since = today.replace(hour=0, minute=0, second=0, tzinfo=tz)
+    fetch_until = datetime(today.year, today.month, last_day, 23, 59, 59, tzinfo=tz)
+    return (
+        fetch_since,
+        fetch_until,
+    )
 
-        existing_events: dict[str, dict[str, Any]] = {}
-        page_token = None
-        while True:
-            events = (
-                service.events()
-                .list(
-                    calendarId=CALENDAR_ID[group_name],
-                    timeMin=one_week_ago_midnight.isoformat(),
-                    timeMax=month_last.isoformat(),
-                    timeZone="Asia/Tokyo",
-                    singleEvents=True,
-                    maxResults=100,
-                    fields="items(id, summary, start, end, extendedProperties(private/source_link)), nextPageToken",
-                    pageToken=page_token,
-                )
-                .execute()
+
+def fetch_google_calendar_events(
+    calendar_id: str,
+    time_min: datetime,
+    time_max: datetime,
+) -> dict[str, dict[str, Any]]:
+    google_calendar_events: dict[str, dict[str, Any]] = {}
+    page_token: str | None = None
+
+    while True:
+        events = (
+            service.events()
+            .list(
+                calendarId=calendar_id,
+                timeMin=time_min.isoformat(),
+                timeMax=time_max.isoformat(),
+                timeZone="Asia/Tokyo",
+                singleEvents=True,
+                maxResults=100,
+                fields="items(id, summary, start, end, extendedProperties(private/source_link)), nextPageToken",
+                pageToken=page_token,
             )
-            for e in events.get("items", []):
-                link = (
-                    e.get("extendedProperties", {})
-                    .get("private", {})
-                    .get("source_link")
-                )
-                if link:
-                    existing_events[link] = e
-
-            page_token = events.get("nextPageToken")
-            if not page_token:
-                break
-        logger.debug("Fetched %d existing events", len(existing_events))
-
-        for schedule in group_schedules:
-            existing_event: Optional[dict[str, Any]] = existing_events.get(
-                schedule["link"]
-            )
-            next_day = datetime.strptime(
-                schedule["date"], "%Y-%m-%d"
-            ).date() + timedelta(days=1)
-            if existing_event:
-                existing_summary = existing_event.get("summary")
-                existing_start = existing_event.get("start", {}).get("date")
-                # update event
-                if (
-                    existing_summary != schedule["title"]
-                    or existing_start != schedule["date"]
-                ):
-                    update_event_info = {
-                        "summary": schedule["title"],
-                        "start": {"date": schedule["date"]},
-                        "end": {"date": next_day.strftime("%Y-%m-%d")},
-                        "description": schedule["link"],
-                        "extendedProperties": {
-                            "private": {"source_link": schedule["link"]}
-                        },
-                    }
-                    try:
-                        service.events().update(
-                            calendarId=CALENDAR_ID[group_name],
-                            eventId=existing_event["id"],
-                            body=update_event_info,
-                        ).execute()
-                        logger.debug(
-                            "Updated event '%s' on %s",
-                            schedule["title"],
-                            schedule["date"],
-                        )
-                        update_count += 1
-                    except Exception as e:
-                        logger.error(
-                            "Failed to update event '%s': %s",
-                            schedule["title"],
-                            e,
-                        )
-                # skip event
-                else:
-                    duplicate_count += 1
-                    continue
-            # add event
-            else:
-                add_event_info = {
-                    "summary": schedule["title"],
-                    "start": {"date": schedule["date"]},
-                    "end": {"date": next_day.strftime("%Y-%m-%d")},
-                    "description": schedule["link"],
-                    "extendedProperties": {
-                        "private": {"source_link": schedule["link"]}
-                    },
-                }
-                try:
-                    service.events().insert(
-                        calendarId=CALENDAR_ID[group_name],
-                        body=add_event_info,
-                    ).execute()
-                    logger.debug(
-                        "Added event '%s' on %s",
-                        schedule["title"],
-                        schedule["date"],
-                    )
-                    added_count += 1
-                except Exception as e:
-                    logger.error(
-                        "Failed to add event '%s': %s",
-                        schedule["title"],
-                        e,
-                    )
-        logger.debug("Skipped %d duplicate events", duplicate_count)
-        logger.debug("Added %d new events", added_count)
-        logger.debug("Updated %d existing events", update_count)
-        logger.info(
-            "Summary: %d fetched, %d added, %d updated, %d skipped\n",
-            len(existing_events),
-            added_count,
-            update_count,
-            duplicate_count,
+            .execute()
         )
-    return None
+        for e in events.get("items", []):
+            link = e.get("extendedProperties", {}).get("private", {}).get("source_link")
+            if link:
+                google_calendar_events[link] = e
+
+        page_token = events.get("nextPageToken")
+        if not page_token:
+            break
+    logger.debug("Fetched %d existing events", len(google_calendar_events))
+    return google_calendar_events
+
+
+def build_calendar_event_body(
+    title: str,
+    date: str,
+    link: str,
+) -> dict:
+    next_day = datetime.strptime(date, "%Y-%m-%d").date() + timedelta(days=1)
+    return {
+        "summary": title,
+        "start": {"date": date},
+        "end": {"date": next_day.strftime("%Y-%m-%d")},
+        "description": link,
+        "extendedProperties": {"private": {"source_link": link}},
+    }
+
+
+def create_calendar_event(
+    calendar_id: str,
+    event_body: dict,
+) -> None:
+    try:
+        service.events().insert(
+            calendarId=calendar_id,
+            body=event_body,
+        ).execute()
+        logger.debug(
+            "Created event '%s' on %s",
+            event_body["summary"],
+            event_body["start"].get("date"),
+        )
+    except Exception as e:
+        logger.error(
+            "Failed to create event '%s': %s",
+            event_body["summary"],
+            e,
+        )
+
+
+def update_calendar_event(
+    calendar_id: str,
+    event_id: str,
+    event_body: dict,
+) -> None:
+    try:
+        service.events().update(
+            calendarId=calendar_id,
+            eventId=event_id,
+            body=event_body,
+        ).execute()
+        logger.debug(
+            "Updated event '%s' on %s",
+            event_body["summary"],
+            event_body["start"].get("date"),
+        )
+    except Exception as e:
+        logger.error(
+            "Failed to update event '%s': %s",
+            event_body["summary"],
+            e,
+        )
+
+
+def sync_events(schedules_by_group: dict[str, list[dict[str, str]]]) -> None:
+    time_min, time_max = get_time_bounds()
+
+    for group_name, scraped_events in schedules_by_group.items():
+        logger.info("Processing group: %s", group_name)
+        create_count = update_count = skip_count = 0
+
+        google_calendar_events = fetch_google_calendar_events(
+            CALENDAR_IDS[group_name],
+            time_min,
+            time_max,
+        )
+
+        for scraped_event in scraped_events:
+            google_calendar_event = google_calendar_events.get(scraped_event["link"])
+            event_body = build_calendar_event_body(
+                scraped_event["title"],
+                scraped_event["date"],
+                scraped_event["link"],
+            )
+
+            if not google_calendar_event:
+                create_calendar_event(
+                    CALENDAR_IDS[group_name],
+                    event_body,
+                )
+                create_count += 1
+                continue
+
+            is_changed = (
+                google_calendar_event["summary"] != scraped_event["title"]
+                or google_calendar_event["start"]["date"] != scraped_event["date"]
+            )
+            if is_changed:
+                update_calendar_event(
+                    CALENDAR_IDS[group_name],
+                    google_calendar_event["id"],
+                    event_body,
+                )
+                update_count += 1
+            else:
+                skip_count += 1
+
+        logger.info(
+            "Sync completed: created=%d, updated=%d, skipped=%d",
+            create_count,
+            update_count,
+            skip_count,
+        )

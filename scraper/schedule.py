@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import requests
@@ -7,29 +7,39 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-JST = ZoneInfo("Asia/Tokyo")
-today = datetime.now(JST).date()
-year = today.year
-month = today.month
 
-urls = {
-    "equal_love": "https://equal-love.jp",
-    "not_equal_me": "https://not-equal-me.jp",
-    "nearly_equal_joy": "https://nearly-equal-joy.jp",
-}
-
-schedules: dict[str, list[dict[str, str]]] = {
-    "equal_love": [],
-    "not_equal_me": [],
-    "nearly_equal_joy": [],
-}
+def get_time_bounds(zone_time: str = "Asia/Tokyo") -> tuple[date, int, int]:
+    tz = ZoneInfo(zone_time)
+    today = datetime.now(tz).date()
+    year = today.year
+    month = today.month
+    return (
+        today,
+        year,
+        month,
+    )
 
 
 def get_schedule() -> dict[str, list[dict[str, str]]]:
-    for group_name, url in urls.items():
+    GROUP_URLS = {
+        "equal_love": "https://equal-love.jp",
+        "not_equal_me": "https://not-equal-me.jp",
+        "nearly_equal_joy": "https://nearly-equal-joy.jp",
+    }
+
+    schedules_by_group: dict[str, list[dict[str, str]]] = {
+        "equal_love": [],
+        "not_equal_me": [],
+        "nearly_equal_joy": [],
+    }
+
+    today, year, month = get_time_bounds()
+
+    for group_name, url in GROUP_URLS.items():
         try:
             response = requests.get(
-                f"{url}/schedule/calender/{year}/{month:02}", timeout=10
+                f"{url}/schedule/calender/{year}/{month:02}",
+                timeout=10,
             )
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
@@ -37,40 +47,46 @@ def get_schedule() -> dict[str, list[dict[str, str]]]:
             logger.exception("%s: Failed request", group_name)
             continue
 
-        cells = soup.select(".calendarBody .cell")
-        if not cells:
+        cell_divs = soup.select(".calendarBody .cell")
+        if not cell_divs:
             raise RuntimeError(f"Failed to get cells (group: {group_name})")
 
-        for cell in cells:
-            date_tag = cell.select_one(".date")
-            if not date_tag or not date_tag.text.strip():
+        for cell_div in cell_divs:
+            date_span = cell_div.select_one(".date")
+            if not date_span or not date_span.text.strip():
                 continue
 
-            date_text = date_tag.text.strip()
-            acquisition_date = date(year, month, int(date_text))
-            if today - timedelta(days=7) > acquisition_date:
+            day_number = int(date_span.text.strip())
+            event_date = date(year, month, day_number)
+
+            if event_date < today:
                 continue
 
-            for div_tag in cell.select("div[class^=live]"):
-                title_tag = div_tag.select_one(".tit")
-                if not title_tag:
+            for live_divs in cell_div.select("div[class^=live]"):
+                tit_span = live_divs.select_one(".tit")
+                if not tit_span:
                     logger.warning("Failed to get title (group: %s)", group_name)
                     continue
 
-                link_tag = div_tag.select_one("a")
-                if not link_tag:
+                link_a = live_divs.select_one("a")
+                if not link_a:
                     continue
 
-                href = link_tag.get("href")
+                href = link_a.get("href")
                 if not isinstance(href, str):
                     continue
 
-                schedules[group_name].append(
+                schedules_by_group[group_name].append(
                     {
-                        "date": acquisition_date.strftime("%Y-%m-%d"),
-                        "title": title_tag.text.strip(),
+                        "date": event_date.strftime("%Y-%m-%d"),
+                        "title": tit_span.text.strip(),
                         "link": f"{url}{href}",
                     }
                 )
-        logger.debug("Scraped %d events", len(schedules[group_name]))
-    return schedules
+        logger.debug(
+            "Scraped %d events for %s",
+            len(schedules_by_group[group_name]),
+            group_name,
+        )
+
+    return schedules_by_group
