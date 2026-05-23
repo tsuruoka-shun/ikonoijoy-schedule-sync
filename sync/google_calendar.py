@@ -78,7 +78,7 @@ def build_calendar_event_body(
     title: str,
     date: str,
     link: str,
-) -> dict:
+) -> dict[str, Any]:
     next_day = datetime.strptime(date, "%Y-%m-%d").date() + timedelta(days=1)
     return {
         "summary": title,
@@ -89,26 +89,35 @@ def build_calendar_event_body(
     }
 
 
+def execute_calendar_request(
+    request: Any,
+    success_msg: str,
+    error_msg: str,
+    *log_args,
+) -> bool:
+    try:
+        request.execute()
+        logger.debug(success_msg, *log_args)
+        return True
+    except Exception as e:
+        logger.error(error_msg, *log_args, e)
+        return False
+
+
 def create_calendar_event(
     calendar_id: str,
     event_body: dict,
 ) -> None:
-    try:
+    execute_calendar_request(
         service.events().insert(
             calendarId=calendar_id,
             body=event_body,
-        ).execute()
-        logger.debug(
-            "Created event '%s' on %s",
-            event_body["summary"],
-            event_body["start"].get("date"),
-        )
-    except Exception as e:
-        logger.error(
-            "Failed to create event '%s': %s",
-            event_body["summary"],
-            e,
-        )
+        ),
+        "Created event '%s' on %s",
+        "Failed to create event '%s': %s",
+        event_body["summary"],
+        event_body["start"].get("date"),
+    )
 
 
 def update_calendar_event(
@@ -116,23 +125,35 @@ def update_calendar_event(
     event_id: str,
     event_body: dict,
 ) -> None:
-    try:
+    execute_calendar_request(
         service.events().update(
             calendarId=calendar_id,
             eventId=event_id,
             body=event_body,
-        ).execute()
-        logger.debug(
-            "Updated event '%s' on %s",
-            event_body["summary"],
-            event_body["start"].get("date"),
-        )
-    except Exception as e:
-        logger.error(
-            "Failed to update event '%s': %s",
-            event_body["summary"],
-            e,
-        )
+        ),
+        "Updated event '%s' on %s",
+        "Failed to update event '%s': %s",
+        event_body["summary"],
+        event_body["start"].get("date"),
+    )
+
+
+def delete_calendar_event(
+    calendar_id: str,
+    event_id: str,
+    summary: str,
+    date: str,
+) -> None:
+    execute_calendar_request(
+        service.events().delete(
+            calendarId=calendar_id,
+            eventId=event_id,
+        ),
+        "Deleted event '%s' on %s",
+        "Failed to delete event '%s': %s",
+        summary,
+        date,
+    )
 
 
 def sync_events(schedules_by_group: dict[str, list[dict[str, str]]]) -> None:
@@ -140,10 +161,11 @@ def sync_events(schedules_by_group: dict[str, list[dict[str, str]]]) -> None:
 
     for group_name, scraped_events in schedules_by_group.items():
         logger.info("Processing group: %s", group_name)
-        create_count = update_count = skip_count = 0
+        create_count = update_count = delete_count = skip_count = 0
+        calendar_id = CALENDAR_IDS[group_name]
 
         google_calendar_events = fetch_google_calendar_events(
-            CALENDAR_IDS[group_name],
+            calendar_id,
             time_min,
             time_max,
         )
@@ -158,7 +180,7 @@ def sync_events(schedules_by_group: dict[str, list[dict[str, str]]]) -> None:
 
             if not google_calendar_event:
                 create_calendar_event(
-                    CALENDAR_IDS[group_name],
+                    calendar_id,
                     event_body,
                 )
                 create_count += 1
@@ -166,11 +188,11 @@ def sync_events(schedules_by_group: dict[str, list[dict[str, str]]]) -> None:
 
             is_changed = (
                 google_calendar_event["summary"] != scraped_event["title"]
-                or google_calendar_event["start"]["date"] != scraped_event["date"]
+                or google_calendar_event["start"].get("date") != scraped_event["date"]
             )
             if is_changed:
                 update_calendar_event(
-                    CALENDAR_IDS[group_name],
+                    calendar_id,
                     google_calendar_event["id"],
                     event_body,
                 )
@@ -178,9 +200,23 @@ def sync_events(schedules_by_group: dict[str, list[dict[str, str]]]) -> None:
             else:
                 skip_count += 1
 
+        scraped_event_links = {
+            scraped_event["link"] for scraped_event in scraped_events
+        }
+        for link, google_calendar_event in google_calendar_events.items():
+            if link not in scraped_event_links:
+                delete_calendar_event(
+                    calendar_id,
+                    google_calendar_event["id"],
+                    google_calendar_event["summary"],
+                    google_calendar_event["start"].get("date"),
+                )
+                delete_count += 1
+
         logger.info(
-            "Sync completed: created=%d, updated=%d, skipped=%d",
+            "Sync completed: created=%d, updated=%d, deleted=%d, skipped=%d",
             create_count,
             update_count,
+            delete_count,
             skip_count,
         )
