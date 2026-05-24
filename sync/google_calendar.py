@@ -160,8 +160,8 @@ def execute_calendar_request(
 def create_calendar_event(
     calendar_id: str,
     event_body: EventBody,
-) -> None:
-    execute_calendar_request(
+) -> bool:
+    return execute_calendar_request(
         service.events().insert(
             calendarId=calendar_id,
             body=event_body,
@@ -177,8 +177,8 @@ def update_calendar_event(
     calendar_id: str,
     event_id: str,
     event_body: EventBody,
-) -> None:
-    execute_calendar_request(
+) -> bool:
+    return execute_calendar_request(
         service.events().update(
             calendarId=calendar_id,
             eventId=event_id,
@@ -196,8 +196,8 @@ def delete_calendar_event(
     event_id: str,
     summary: str,
     date: str,
-) -> None:
-    execute_calendar_request(
+) -> bool:
+    return execute_calendar_request(
         service.events().delete(
             calendarId=calendar_id,
             eventId=event_id,
@@ -234,11 +234,11 @@ def sync_group_events(
         )
 
         if not google_calendar_event:
-            create_calendar_event(
+            if create_calendar_event(
                 calendar_id,
                 event_body,
-            )
-            create_count += 1
+            ):
+                create_count += 1
             continue
 
         is_changed = (
@@ -246,25 +246,25 @@ def sync_group_events(
             or google_calendar_event["start"]["date"] != scraped_event["date"]
         )
         if is_changed:
-            update_calendar_event(
+            if update_calendar_event(
                 calendar_id,
                 google_calendar_event["id"],
                 event_body,
-            )
-            update_count += 1
+            ):
+                update_count += 1
         else:
             skip_count += 1
 
     scraped_event_links = {scraped_event["link"] for scraped_event in scraped_events}
     for link, google_calendar_event in google_calendar_events.items():
         if link not in scraped_event_links:
-            delete_calendar_event(
+            if delete_calendar_event(
                 calendar_id,
                 google_calendar_event["id"],
                 google_calendar_event["summary"],
                 google_calendar_event["start"]["date"],
-            )
-            delete_count += 1
+            ):
+                delete_count += 1
     logger.info(
         "Sync completed: created=%d, updated=%d, deleted=%d, skipped=%d",
         create_count,
