@@ -3,7 +3,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Protocol, TypedDict
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
@@ -59,6 +59,10 @@ class EventBody(TypedDict):
     end: GoogleEventDate
     description: str
     extendedProperties: ExtendedProperties
+
+
+class GoogleRequest(Protocol):
+    def execute(self) -> dict: ...
 
 
 def get_time_bounds(time_zone: str = "Asia/Tokyo") -> tuple[datetime, datetime]:
@@ -124,7 +128,7 @@ def build_calendar_event_body(
 
 
 def execute_calendar_request(
-    request: Any,
+    request: GoogleRequest,
     success_msg: str,
     error_msg: str,
     *log_args,
