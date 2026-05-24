@@ -46,7 +46,7 @@ def get_schedule() -> dict[str, list[ScrapEvent]]:
         try:
             response = requests.get(
                 f"{url}/schedule/calender/{year}/{month:02}",
-                timeout=10,
+                timeout=(5, 10),
             )
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
