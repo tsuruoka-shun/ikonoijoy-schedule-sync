@@ -1,11 +1,18 @@
 import logging
 from datetime import date, datetime
+from typing import TypedDict
 from zoneinfo import ZoneInfo
 
 import requests
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
+
+
+class ScrapEvent(TypedDict):
+    date: str
+    title: str
+    link: str
 
 
 def get_time_bounds(zone_time: str = "Asia/Tokyo") -> tuple[date, int, int]:
@@ -20,14 +27,14 @@ def get_time_bounds(zone_time: str = "Asia/Tokyo") -> tuple[date, int, int]:
     )
 
 
-def get_schedule() -> dict[str, list[dict[str, str]]]:
+def get_schedule() -> dict[str, list[ScrapEvent]]:
     GROUP_URLS = {
         "equal_love": "https://equal-love.jp",
         "not_equal_me": "https://not-equal-me.jp",
         "nearly_equal_joy": "https://nearly-equal-joy.jp",
     }
 
-    schedules_by_group: dict[str, list[dict[str, str]]] = {
+    schedules_by_group: dict[str, list[ScrapEvent]] = {
         "equal_love": [],
         "not_equal_me": [],
         "nearly_equal_joy": [],

@@ -3,7 +3,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
@@ -27,6 +27,40 @@ CALENDAR_IDS = {
 }
 
 
+class ScrapEvent(TypedDict):
+    date: str
+    title: str
+    link: str
+
+
+class SourceLink(TypedDict):
+    source_link: str
+
+
+class ExtendedProperties(TypedDict):
+    private: SourceLink
+
+
+class GoogleEventDate(TypedDict):
+    date: str
+
+
+class GoogleEvent(TypedDict):
+    id: str
+    summary: str
+    start: GoogleEventDate
+    end: GoogleEventDate
+    extendedProperties: ExtendedProperties
+
+
+class EventBody(TypedDict):
+    summary: str
+    start: GoogleEventDate
+    end: GoogleEventDate
+    description: str
+    extendedProperties: ExtendedProperties
+
+
 def get_time_bounds(time_zone: str = "Asia/Tokyo") -> tuple[datetime, datetime]:
     tz = ZoneInfo(time_zone)
     today = datetime.now(tz)
@@ -43,8 +77,8 @@ def fetch_google_calendar_events(
     calendar_id: str,
     time_min: datetime,
     time_max: datetime,
-) -> dict[str, dict[str, Any]]:
-    google_calendar_events: dict[str, dict[str, Any]] = {}
+) -> dict[str, GoogleEvent]:
+    google_calendar_events: dict[str, GoogleEvent] = {}
     page_token: str | None = None
 
     while True:
@@ -62,10 +96,10 @@ def fetch_google_calendar_events(
             )
             .execute()
         )
-        for e in events.get("items", []):
-            link = e.get("extendedProperties", {}).get("private", {}).get("source_link")
+        for event in events.get("items", []):
+            link = event["extendedProperties"]["private"]["source_link"]
             if link:
-                google_calendar_events[link] = e
+                google_calendar_events[link] = event
 
         page_token = events.get("nextPageToken")
         if not page_token:
@@ -78,7 +112,7 @@ def build_calendar_event_body(
     title: str,
     date: str,
     link: str,
-) -> dict[str, Any]:
+) -> EventBody:
     next_day = datetime.strptime(date, "%Y-%m-%d").date() + timedelta(days=1)
     return {
         "summary": title,
@@ -106,7 +140,7 @@ def execute_calendar_request(
 
 def create_calendar_event(
     calendar_id: str,
-    event_body: dict,
+    event_body: EventBody,
 ) -> None:
     execute_calendar_request(
         service.events().insert(
@@ -116,14 +150,14 @@ def create_calendar_event(
         "Created event '%s' on %s",
         "Failed to create event '%s': %s",
         event_body["summary"],
-        event_body["start"].get("date"),
+        event_body["start"]["date"],
     )
 
 
 def update_calendar_event(
     calendar_id: str,
     event_id: str,
-    event_body: dict,
+    event_body: EventBody,
 ) -> None:
     execute_calendar_request(
         service.events().update(
@@ -134,7 +168,7 @@ def update_calendar_event(
         "Updated event '%s' on %s",
         "Failed to update event '%s': %s",
         event_body["summary"],
-        event_body["start"].get("date"),
+        event_body["start"]["date"],
     )
 
 
@@ -158,7 +192,7 @@ def delete_calendar_event(
 
 def sync_group_events(
     group_name: str,
-    scraped_events: list[dict[str, str]],
+    scraped_events: list[ScrapEvent],
     time_min: datetime,
     time_max: datetime,
 ) -> None:
@@ -221,7 +255,7 @@ def sync_group_events(
     )
 
 
-def sync_events(schedules_by_group: dict[str, list[dict[str, str]]]) -> None:
+def sync_events(schedules_by_group: dict[str, list[ScrapEvent]]) -> None:
     time_min, time_max = get_time_bounds()
 
     for group_name, scraped_events in schedules_by_group.items():
