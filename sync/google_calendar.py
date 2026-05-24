@@ -112,7 +112,11 @@ def fetch_google_calendar_events(
             .execute()
         )
         for event in events.get("items", []):
-            link = event["extendedProperties"]["private"]["source_link"]
+            link = (
+                event.get("extendedProperties", {})
+                .get("private", {})
+                .get("source_link")
+            )
             if link:
                 google_calendar_events[link] = event
 
