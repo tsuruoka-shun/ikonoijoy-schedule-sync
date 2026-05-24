@@ -137,8 +137,8 @@ def execute_calendar_request(
         request.execute()
         logger.debug(success_msg, *log_args)
         return True
-    except Exception as e:
-        logger.error(error_msg, *log_args, e)
+    except Exception:
+        logger.exception(error_msg, *log_args)
         return False
 
 
