@@ -69,8 +69,19 @@ def get_time_bounds(time_zone: str = "Asia/Tokyo") -> tuple[datetime, datetime]:
     tz = ZoneInfo(time_zone)
     today = datetime.now(tz)
     _, last_day = calendar.monthrange(today.year, today.month)
-    fetch_since = today.replace(hour=0, minute=0, second=0, tzinfo=tz)
-    fetch_until = datetime(today.year, today.month, last_day, 23, 59, 59, tzinfo=tz)
+    fetch_since = today.replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+    fetch_until = today.replace(
+        day=last_day,
+        hour=23,
+        minute=59,
+        second=59,
+        microsecond=59,
+    )
     return (
         fetch_since,
         fetch_until,
