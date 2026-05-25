@@ -123,7 +123,9 @@ def fetch_google_calendar_events(
         page_token = events.get("nextPageToken")
         if not page_token:
             break
-    logger.debug("Fetched %d existing events", len(google_calendar_events))
+    logger.debug(
+        "Fetched %d existing events from google calendar", len(google_calendar_events)
+    )
     return google_calendar_events
 
 
