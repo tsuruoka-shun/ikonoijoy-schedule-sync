@@ -1,6 +1,8 @@
 import logging
+import random
+import time
 from datetime import date, datetime
-from typing import TypedDict
+from typing import Optional, TypedDict
 from zoneinfo import ZoneInfo
 
 import requests
@@ -27,6 +29,54 @@ def get_time_bounds(zone_time: str = "Asia/Tokyo") -> tuple[date, int, int]:
     )
 
 
+def fetch_retry(
+    url: str,
+    year: int,
+    month: int,
+    max_retries: int = 3,
+    backoff_base: float = 2.0,
+) -> Optional[requests.Response]:
+    absolute_url = f"{url}/schedule/calender/{year}/{month:02}"
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = requests.get(
+                absolute_url,
+                timeout=(5, 10),
+            )
+            response.raise_for_status()
+            return response
+
+        except requests.exceptions.Timeout:
+            logger.warning(f"[{attempt}/{max_retries}] Timeout: {absolute_url}")
+
+        except requests.exceptions.ConnectionError:
+            logger.warning(
+                f"[{attempt}/{max_retries}] Connection error: {absolute_url}"
+            )
+
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code
+
+            if 400 <= status < 500:
+                logger.error(f"Client error {status}: {absolute_url}")
+                return None
+
+            logger.warning(
+                f"[{attempt}/{max_retries}] Server error {status}: {absolute_url}"
+            )
+
+        if attempt < max_retries:
+            wait = backoff_base**attempt + random.uniform(0, 1)
+
+            logger.debug(f"Retry after {wait:.1f}s")
+
+            time.sleep(wait)
+
+    logger.error(f"Max retries reached: {absolute_url}")
+    return None
+
+
 def get_schedule() -> dict[str, list[ScrapEvent]]:
     GROUP_URLS = {
         "equal_love": "https://equal-love.jp",
@@ -44,19 +94,20 @@ def get_schedule() -> dict[str, list[ScrapEvent]]:
 
     for group_name, url in GROUP_URLS.items():
         try:
-            response = requests.get(
-                f"{url}/schedule/calender/{year}/{month:02}",
-                timeout=10,
-            )
-            response.raise_for_status()
+            response = fetch_retry(url, year, month)
+            if response is None:
+                logger.error("Failed to fetch schedule (group: %s)", group_name)
+                continue
+
             soup = BeautifulSoup(response.text, "html.parser")
-        except requests.RequestException:
-            logger.exception("%s: Failed request", group_name)
+        except Exception:
+            logger.exception("Failed request (group: %s)", group_name)
             continue
 
         cell_divs = soup.select(".calendarBody .cell")
         if not cell_divs:
-            raise RuntimeError(f"Failed to get cells (group: {group_name})")
+            logger.error("Failed to get cells (group: %s)", group_name)
+            continue
 
         for cell_div in cell_divs:
             date_span = cell_div.select_one(".date")

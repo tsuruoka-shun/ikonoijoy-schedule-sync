@@ -278,6 +278,9 @@ def sync_events(schedules_by_group: dict[str, list[ScrapEvent]]) -> None:
     time_min, time_max = get_time_bounds()
 
     for group_name, scraped_events in schedules_by_group.items():
+        if not scraped_events:
+            logger.error("Skipped sync events for %s", group_name)
+            continue
         sync_group_events(
             group_name,
             scraped_events,
