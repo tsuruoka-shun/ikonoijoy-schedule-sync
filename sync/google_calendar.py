@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Protocol, TypedDict
 from zoneinfo import ZoneInfo
 
+from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -68,14 +69,15 @@ class GoogleRequest(Protocol):
 def get_time_bounds(time_zone: str = "Asia/Tokyo") -> tuple[datetime, datetime]:
     tz = ZoneInfo(time_zone)
     today = datetime.now(tz)
-    _, last_day = calendar.monthrange(today.year, today.month)
+    next_month_date = today + relativedelta(months=1)
+    _, last_day = calendar.monthrange(next_month_date.year, next_month_date.month)
     fetch_since = today.replace(
         hour=0,
         minute=0,
         second=0,
         microsecond=0,
     )
-    fetch_until = today.replace(
+    fetch_until = next_month_date.replace(
         day=last_day,
         hour=23,
         minute=59,
@@ -123,7 +125,9 @@ def fetch_google_calendar_events(
         page_token = events.get("nextPageToken")
         if not page_token:
             break
-    logger.debug("Fetched %d existing events", len(google_calendar_events))
+    logger.debug(
+        "Fetched %d existing events from google calendar", len(google_calendar_events)
+    )
     return google_calendar_events
 
 
