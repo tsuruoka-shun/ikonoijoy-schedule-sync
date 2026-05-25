@@ -106,7 +106,8 @@ def get_schedule() -> dict[str, list[ScrapEvent]]:
 
         cell_divs = soup.select(".calendarBody .cell")
         if not cell_divs:
-            raise RuntimeError(f"Failed to get cells (group: {group_name})")
+            logger.error("Failed to get cells (group: %s)", group_name)
+            continue
 
         for cell_div in cell_divs:
             date_span = cell_div.select_one(".date")
