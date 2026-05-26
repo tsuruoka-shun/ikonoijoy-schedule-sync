@@ -1,8 +1,8 @@
 import calendar
+import json
 import logging
 import os
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Protocol, TypedDict
 from zoneinfo import ZoneInfo
 
@@ -15,17 +15,14 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-cred = service_account.Credentials.from_service_account_file(
-    Path(__file__).resolve().parent.parent / "credentials/service_account.json",
+info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+cred = service_account.Credentials.from_service_account_info(
+    info,
     scopes=["https://www.googleapis.com/auth/calendar"],
 )
 service = build("calendar", "v3", credentials=cred)
 
-CALENDAR_IDS = {
-    "equal_love": os.environ["EQUAL_LOVE_CALENDAR_ID"],
-    "not_equal_me": os.environ["NOT_EQUAL_ME_CALENDAR_ID"],
-    "nearly_equal_joy": os.environ["NEARLY_EQUAL_JOY_CALENDAR_ID"],
-}
+CALENDAR_IDS = json.loads(os.environ["GOOGLE_CALENDAR_IDS"])
 
 
 class ScrapEvent(TypedDict):
