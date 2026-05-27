@@ -2,8 +2,7 @@ name: Google Calendar Job
 
 on:
   schedule:
-    - cron: "0 3 * * *"
-    - cron: "0 15 * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch:
 
 jobs:
@@ -15,6 +14,13 @@ jobs:
       GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
     steps:
+      - name: Show execution time
+        run: |
+          echo "UTC time:"
+          date -u
+
+          echo "JST time:"
+          TZ=Asia/Tokyo date
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -27,7 +33,7 @@ jobs:
         uses: astral-sh/setup-uv@v8.1.0
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --no-dev
 
       - name: Run python
         run: uv run python main.py
