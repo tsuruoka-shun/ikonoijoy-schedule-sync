@@ -14,6 +14,13 @@ jobs:
       GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
     steps:
+      - name: Show execution time
+        run: |
+          echo "UTC time:"
+          date -u
+
+          echo "JST time:"
+          TZ=Asia/Tokyo date
       - name: Checkout
         uses: actions/checkout@v4
 
