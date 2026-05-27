@@ -35,12 +35,13 @@ def build_schedule_url(url: str, year: int, month: int) -> str:
 
 def fetch_retry(
     url: str,
+    headers: dict[str, str],
     max_retries: int = 3,
     backoff_base: float = 2.0,
 ) -> Optional[requests.Response]:
     for attempt in range(1, max_retries + 1):
         try:
-            response = requests.get(url, timeout=(5, 10))
+            response = requests.get(url, headers=headers, timeout=(5, 10))
             response.raise_for_status()
             return response
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
@@ -118,10 +119,11 @@ def parse_cell(
 
 def fetch_group_schedule(
     url: str,
+    headers: dict[str, str],
     year: int,
     month: int,
 ) -> Optional[BeautifulSoup]:
-    response = fetch_retry(build_schedule_url(url, year, month))
+    response = fetch_retry(build_schedule_url(url, year, month), headers)
     if not response:
         return None
 
@@ -138,10 +140,17 @@ def get_schedule() -> dict[str, list[ScrapEvent]]:
     schedules_by_group: dict[str, list[ScrapEvent]] = {key: [] for key in GROUP_URLS}
     target_date = get_current_and_next_months()
     today_str = date.today().strftime("%Y-%m-%d")
+    headers = {
+        "user-agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
+        )
+    }
 
     for group_name, url in GROUP_URLS.items():
         for year, month in target_date:
-            soup = fetch_group_schedule(url, year, month)
+            soup = fetch_group_schedule(url, headers, year, month)
             if not soup:
                 logger.error(
                     "Failed fetch: group=%s year=%s month=%s",
