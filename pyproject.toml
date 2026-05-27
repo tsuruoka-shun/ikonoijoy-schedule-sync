@@ -9,14 +9,12 @@ dependencies = [
     "google-api-python-client>=2.196.0",
     "google-auth>=2.52.0",
     "python-dateutil>=2.9.0.post0",
-    "python-dotenv>=1.2.2",
     "requests>=2.34.0",
     "tzdata>=2026.2",
 ]
 
 [dependency-groups]
 dev = [
-    "isort>=8.0.1",
     "mypy>=2.1.0",
     "pre-commit>=4.6.0",
     "ruff>=0.15.12",
