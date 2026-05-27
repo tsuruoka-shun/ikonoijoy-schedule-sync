@@ -7,11 +7,8 @@ from typing import Protocol, TypedDict
 from zoneinfo import ZoneInfo
 
 from dateutil.relativedelta import relativedelta
-from dotenv import load_dotenv
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
