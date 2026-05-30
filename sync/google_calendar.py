@@ -7,19 +7,16 @@ from typing import Protocol, TypedDict
 from zoneinfo import ZoneInfo
 
 from dateutil.relativedelta import relativedelta
-from google.oauth2 import service_account
+from google.auth import default
+from google.cloud import secretmanager_v1
 from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
 
-info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
-cred = service_account.Credentials.from_service_account_info(
-    info,
-    scopes=["https://www.googleapis.com/auth/calendar"],
-)
-service = build("calendar", "v3", credentials=cred)
+client = secretmanager_v1.SecretManagerServiceClient()
 
-CALENDAR_IDS = json.loads(os.environ["GOOGLE_CALENDAR_IDS"])
+PROJECT_ID = os.environ["PROJECT_ID"]
+SECRET_NAME = os.environ["CALENDAR_SECRET_NAME"]
 
 
 class ScrapEvent(TypedDict):
@@ -60,6 +57,22 @@ class GoogleRequest(Protocol):
     def execute(self) -> dict: ...
 
 
+def get_calendar_ids() -> dict[str, str]:
+    name = f"projects/{PROJECT_ID}/secrets/{SECRET_NAME}/versions/latest"
+    response = client.access_secret_version(request={"name": name})
+    return json.loads(response.payload.data.decode("UTF-8"))
+
+
+def get_calendar_service():
+    cred, _ = default(scopes=["https://www.googleapis.com/auth/calendar"])
+    return build(
+        "calendar",
+        "v3",
+        credentials=cred,
+        cache_discovery=False,
+    )
+
+
 def get_time_bounds(time_zone: str = "Asia/Tokyo") -> tuple[datetime, datetime]:
     tz = ZoneInfo(time_zone)
     today = datetime.now(tz)
@@ -86,6 +99,7 @@ def get_time_bounds(time_zone: str = "Asia/Tokyo") -> tuple[datetime, datetime]:
 
 def fetch_google_calendar_events(
     calendar_id: str,
+    service,
     time_min: datetime,
     time_max: datetime,
 ) -> dict[str, GoogleEvent]:
@@ -156,6 +170,7 @@ def execute_calendar_request(
 
 
 def create_calendar_event(
+    service,
     calendar_id: str,
     event_body: EventBody,
 ) -> bool:
@@ -172,6 +187,7 @@ def create_calendar_event(
 
 
 def update_calendar_event(
+    service,
     calendar_id: str,
     event_id: str,
     event_body: EventBody,
@@ -190,6 +206,7 @@ def update_calendar_event(
 
 
 def delete_calendar_event(
+    service,
     calendar_id: str,
     event_id: str,
     summary: str,
@@ -210,14 +227,17 @@ def delete_calendar_event(
 def sync_group_events(
     group_name: str,
     scraped_events: list[ScrapEvent],
+    service,
+    calendar_ids: dict[str, str],
     time_min: datetime,
     time_max: datetime,
 ) -> None:
     logger.info("Processing group: %s", group_name)
     create_count = update_count = delete_count = skip_count = 0
-    calendar_id = CALENDAR_IDS[group_name]
+    calendar_id = calendar_ids[group_name]
 
     google_calendar_events = fetch_google_calendar_events(
+        service,
         calendar_id,
         time_min,
         time_max,
@@ -233,6 +253,7 @@ def sync_group_events(
 
         if not google_calendar_event:
             if create_calendar_event(
+                service,
                 calendar_id,
                 event_body,
             ):
@@ -245,6 +266,7 @@ def sync_group_events(
         )
         if is_changed:
             if update_calendar_event(
+                service,
                 calendar_id,
                 google_calendar_event["id"],
                 event_body,
@@ -257,6 +279,7 @@ def sync_group_events(
     for link, google_calendar_event in google_calendar_events.items():
         if link not in scraped_event_links:
             if delete_calendar_event(
+                service,
                 calendar_id,
                 google_calendar_event["id"],
                 google_calendar_event["summary"],
@@ -273,6 +296,8 @@ def sync_group_events(
 
 
 def sync_events(schedules_by_group: dict[str, list[ScrapEvent]]) -> None:
+    service = get_calendar_service()
+    calendar_ids = get_calendar_ids()
     time_min, time_max = get_time_bounds()
 
     for group_name, scraped_events in schedules_by_group.items():
@@ -282,6 +307,8 @@ def sync_events(schedules_by_group: dict[str, list[ScrapEvent]]) -> None:
         sync_group_events(
             group_name,
             scraped_events,
+            service,
+            calendar_ids,
             time_min,
             time_max,
         )
