@@ -13,11 +13,6 @@ from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
 
-client = secretmanager_v1.SecretManagerServiceClient()
-
-PROJECT_ID = os.environ["PROJECT_ID"]
-SECRET_NAME = os.environ["CALENDAR_SECRET_NAME"]
-
 
 class ScrapEvent(TypedDict):
     date: str
@@ -57,12 +52,6 @@ class GoogleRequest(Protocol):
     def execute(self) -> dict: ...
 
 
-def get_calendar_ids() -> dict[str, str]:
-    name = f"projects/{PROJECT_ID}/secrets/{SECRET_NAME}/versions/latest"
-    response = client.access_secret_version(request={"name": name})
-    return json.loads(response.payload.data.decode("UTF-8"))
-
-
 def get_calendar_service():
     cred, _ = default(scopes=["https://www.googleapis.com/auth/calendar"])
     return build(
@@ -71,6 +60,16 @@ def get_calendar_service():
         credentials=cred,
         cache_discovery=False,
     )
+
+
+def get_calendar_ids() -> dict[str, str]:
+    client = secretmanager_v1.SecretManagerServiceClient()
+    project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
+    SECRET_NAME = "google-calendar-ids"
+
+    name = f"projects/{project_id}/secrets/{SECRET_NAME}/versions/latest"
+    response = client.access_secret_version(request={"name": name})
+    return json.loads(response.payload.data.decode("UTF-8"))
 
 
 def get_time_bounds(time_zone: str = "Asia/Tokyo") -> tuple[datetime, datetime]:
@@ -98,8 +97,8 @@ def get_time_bounds(time_zone: str = "Asia/Tokyo") -> tuple[datetime, datetime]:
 
 
 def fetch_google_calendar_events(
-    calendar_id: str,
     service,
+    calendar_id: str,
     time_min: datetime,
     time_max: datetime,
 ) -> dict[str, GoogleEvent]:
