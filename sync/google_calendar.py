@@ -1,7 +1,6 @@
 import calendar
 import json
 import logging
-import os
 from datetime import datetime, timedelta
 from typing import Protocol, TypedDict
 from zoneinfo import ZoneInfo
@@ -64,7 +63,7 @@ def get_calendar_service():
 
 def get_calendar_ids() -> dict[str, str]:
     client = secretmanager_v1.SecretManagerServiceClient()
-    project_id = os.environ["GOOGLE_CLOUD_PROJECT"]
+    _, project_id = default()
     SECRET_NAME = "google-calendar-ids"
 
     name = f"projects/{project_id}/secrets/{SECRET_NAME}/versions/latest"
