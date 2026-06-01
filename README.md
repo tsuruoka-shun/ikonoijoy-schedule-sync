@@ -1,74 +1,49 @@
 # ikonoijoy-schedule-sync
 
-Webスクレイピングでイベントスケジュールを取得するプロジェクト
+---
+
+## 📜 目次
+1. [概要](#-概要)
+2. [使用技術](#-使用技術)
+3. [ディレクトリ構成](#-ディレクトリ構成)
+4. [Gitルール](#-Gitルール)
+    - [ブランチ命名規則](#-ブランチ命名規則)
+    - [コミットメッセージ規則](#-コミットメッセージ規則)
 
 
+## 💡 概要
 
-## 📌 概要
+各グループの公式スケジュールページから、スクレイピングをしてスケジュールを取得します。  
+取得したスケジュールをもとに、個人Googleカレンダーに予定を同期（作成、更新、削除）をします。
+> 対象サイト
+> - https://equal-love.jp/schedule
+> - https://not-equal-me.jp/schedule
+> - https://nearly-equal-joy.jp/schedule
 
-このプロジェクトは、複数のサイトからイベントスケジュールを取得し、構造化データとして扱うためのスクリプトです。
-
-対象サイト：
-- https://equal-love.jp/schedule
-- https://not-equal-me.jp/schedule
-- https://nearly-equal-joy.jp/schedule
-
-
-
-## 🚀 機能
-
-- スケジュール情報の自動取得
-- 月ごとのデータ取得対応
-- グループ別にデータ整理
-- 取得データからGoogleカレンダー予定作成
-
-
+---
 
 ## 🛠️ 使用技術
 
+### Python
 - Python 3.13
+
+### Pythonプロジェクト管理
 - uv
+
+### 使用パッケージ
+- requests
 - beautifulsoup4
 - google-api-python-client
 - google-auth
-- python-dotenv
-- requests
-- tzdata
-- isort
-- mypy
-- pre-commit
-- ruff
-- types-requests
+- google-cloud-secret-manager
 
+### Google Cloudサービス
+- Calendar API
+- Cloud Run
+- Cloud Secret Manager
+- Cloud Scheduler
 
-
-## 📦 セットアップ
-
-```bash
-git clone <repository-url>
-cd <project-name>
-
-uv sync
-```
-
-
-
-## ▶️ 使用方法
-
-```bash
-uv run python main.py
-```
-
-
-
-## 🧪 Lint & 型チェック
-
-```bash
-uv run ruff check .
-uv run mypy .
-```
-
-
+---
 
 ## 📁 ディレクトリ構成
 
@@ -79,34 +54,29 @@ uv run mypy .
 │   │   ├── branch_restrictions.yaml
 │   │   └── ci.yaml
 │   └── pull_request_template.md
-├── sync/
-│   ├── __init__.py
-│   └── google_calendar.py
 ├── scraper/
 │   ├── __init__.py
-│   └── schedule.py
+│   └── schedule.py                    # スクレイピング
+├── sync/
+│   ├── __init__.py
+│   └── google_calendar.py             # カレンダー同期
 ├── typings/
 │   └── googleapiclient/
 │       ├── __init__.pyi
 │       └── discovery.pyi
+├── .dockerignore
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── .python-version
-├── main.py
+├── docker-compose.yaml
+├── Dockerfile
+├── main.py                            # エントリーポイント
 ├── pyproject.toml
-├── uv.lock
-└── README.md
+├── README.md
+└── uv.lock
 ```
 
-
-
-## 📌 備考
-
-- スクレイピング対象サイトの仕様変更に注意
-- 過度なアクセスは避ける（負荷対策）
-- HTML構造依存のため壊れやすい
-
-
+---
 
 ## ⚠️ Gitルール
 
@@ -127,9 +97,3 @@ uv run mypy .
 - refactor: リファクタリング
 - hotfix: 緊急修正
 - docs: ドキュメント変更
-
-
-
-## 🧑‍💻 作成者
-
-- [tsuruoka-shun](https://github.com/tsuruoka-shun) (GitHub)
