@@ -446,6 +446,7 @@ dependencies = [
     { name = "google-auth" },
     { name = "google-cloud-secret-manager" },
     { name = "python-dateutil" },
+    { name = "python-dotenv" },
     { name = "requests" },
     { name = "tzdata" },
 ]
@@ -454,7 +455,6 @@ dependencies = [
 dev = [
     { name = "mypy" },
     { name = "pre-commit" },
-    { name = "python-dotenv" },
     { name = "ruff" },
     { name = "types-python-dateutil" },
     { name = "types-requests" },
@@ -467,6 +467,7 @@ requires-dist = [
     { name = "google-auth", specifier = ">=2.52.0" },
     { name = "google-cloud-secret-manager", specifier = ">=2.28.0" },
     { name = "python-dateutil", specifier = ">=2.9.0.post0" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "requests", specifier = ">=2.34.0" },
     { name = "tzdata", specifier = ">=2026.2" },
 ]
@@ -475,7 +476,6 @@ requires-dist = [
 dev = [
     { name = "mypy", specifier = ">=2.1.0" },
     { name = "pre-commit", specifier = ">=4.6.0" },
-    { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "ruff", specifier = ">=0.15.12" },
     { name = "types-python-dateutil", specifier = ">=2.9.0.20260518" },
     { name = "types-requests", specifier = ">=2.33.0.20260508" },
