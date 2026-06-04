@@ -3,7 +3,7 @@ import logging
 from scraper.schedule import get_schedule
 from sync.google_calendar import sync_events
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 for lib in [
     "urllib3",
