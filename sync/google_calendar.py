@@ -6,11 +6,14 @@ from typing import Protocol, TypedDict
 from zoneinfo import ZoneInfo
 
 from dateutil.relativedelta import relativedelta
+from dotenv import load_dotenv
 from google.auth import default
 from google.cloud import secretmanager_v1
 from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
+
+load_dotenv()
 
 
 class ScrapEvent(TypedDict):
