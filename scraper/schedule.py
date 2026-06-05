@@ -139,7 +139,7 @@ def get_schedule() -> dict[str, list[ScrapEvent]]:
 
     schedules_by_group: dict[str, list[ScrapEvent]] = {key: [] for key in GROUP_URLS}
     target_date = get_current_and_next_months()
-    today_str = date.today().strftime("%Y-%m-%d")
+    today = datetime.now(ZoneInfo("Asia/Tokyo")).date()
     headers = {
         "user-agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -174,11 +174,12 @@ def get_schedule() -> dict[str, list[ScrapEvent]]:
                 events = parse_cell(cell, year, month, url)
 
                 for event in events:
-                    if event["date"] < today_str:
+                    event_date = datetime.strptime(event["date"], "%Y-%m-%d").date()
+                    if event_date < today:
                         continue
                     schedules_by_group[group_name].append(event)
 
-        logger.debug(
+        logger.info(
             "Scraped %d events for %s",
             len(schedules_by_group[group_name]),
             group_name,
