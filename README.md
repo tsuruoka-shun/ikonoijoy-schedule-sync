@@ -65,10 +65,10 @@
 │       ├── __init__.pyi
 │       └── discovery.pyi
 ├── .dockerignore
+├── .env
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── .python-version
-├── docker-compose.yaml
 ├── Dockerfile
 ├── main.py                            # エントリーポイント
 ├── pyproject.toml

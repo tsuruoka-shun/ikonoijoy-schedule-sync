@@ -179,7 +179,7 @@ def get_schedule() -> dict[str, list[ScrapEvent]]:
                         continue
                     schedules_by_group[group_name].append(event)
 
-        logger.debug(
+        logger.info(
             "Scraped %d events for %s",
             len(schedules_by_group[group_name]),
             group_name,
